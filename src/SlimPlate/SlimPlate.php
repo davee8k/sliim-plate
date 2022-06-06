@@ -9,9 +9,9 @@ namespace SlimPlate;
  *
  * {if $a->b == 5}OK{else}NO{/if}
  *
- * @version 0.85302
+ * @version 0.85.31
  * @author DaVee
- * @license http://www.wtfpl.net/
+ * @license https://unlicense.org/
  */
 class SlimPlate {
 	/** @var string */
@@ -30,7 +30,7 @@ class SlimPlate {
 	}
 
 	/**
-	 * Check template for errors, throw \InvalidArgumentException
+	 * Check template for errors, throw InvalidArgumentException
 	 * @param array $data
 	 * @param bool $strict
 	 * @return bool
