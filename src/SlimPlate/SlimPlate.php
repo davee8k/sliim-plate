@@ -10,7 +10,7 @@ namespace SlimPlate;
  * {if $a->b == 5}OK{else}NO{/if}
  *
  * @version 0.85.31
- * @author DaVee
+ * @author DaVee8k
  * @license https://unlicense.org/
  */
 class SlimPlate {
