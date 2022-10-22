@@ -1,6 +1,8 @@
 <?php
 namespace SlimPlate;
 
+use InvalidArgumentException;
+
 /**
  * Bare bone templating system for text strings, based on Latte syntax
  * Self-fixing >< conversion by HTML editors (TinyMCE)
@@ -9,9 +11,9 @@ namespace SlimPlate;
  *
  * {if $a->b == 5}OK{else}NO{/if}
  *
- * @version 0.85.31
  * @author DaVee8k
  * @license https://unlicense.org/
+ * @version 0.85.32
  */
 class SlimPlate {
 	/** @var string */
@@ -34,7 +36,7 @@ class SlimPlate {
 	 * @param array $data
 	 * @param bool $strict
 	 * @return bool
-	 * @throws \InvalidArgumentException
+	 * @throws InvalidArgumentException
 	 */
 	public function check (array $data = array(), $strict = false) {
 		$text = $this->template;
@@ -45,19 +47,19 @@ class SlimPlate {
 					$con = trim($matches[1][$i]);
 					$text = preg_replace('/'.preg_quote($match,'/').'/', '', $text, 1);
 
-					if (preg_match_all('/{else}/i', $matches[2][$i]) > 1) throw new \InvalidArgumentException("Multiple else in: ".$matches[2][$i]);
+					if (preg_match_all('/{else}/i', $matches[2][$i]) > 1) throw new InvalidArgumentException("Multiple else in: ".$matches[2][$i]);
 
 					if ($con !== '') {
 						if ($con[0] === '$') $val = $this->findVar($con, $data);
 						else $val = $this->findValue($con);
 					}
 					if ($val) $con = trim(preg_replace('/'.preg_quote($val[0],'/').'/', '', $con, 1));
-					else throw new \InvalidArgumentException('Empty IF condition');
+					else throw new InvalidArgumentException('Empty IF condition');
 
 					if ($con) {
 						$operator = $this->findOperator($con);
 						if ($operator && $this->operator(0, $operator[0], 0) !== null) $con = trim(preg_replace('/'.preg_quote($operator[0],'/').'/', '', $con, 1));
-						else throw new \InvalidArgumentException("Undefined IF operator: ".$con);
+						else throw new InvalidArgumentException("Undefined IF operator: ".$con);
 
 						$val = '';
 						if ($con !== '') {
@@ -65,7 +67,7 @@ class SlimPlate {
 							else $val = $this->findValue($con);
 						}
 						if ($val) $con = trim(preg_replace('/'.preg_quote($val[0],'/').'/', '', $con, 1));
-						else throw new \InvalidArgumentException('Missing second variable: '.trim($matches[1][$i]));
+						else throw new InvalidArgumentException('Missing second variable: '.trim($matches[1][$i]));
 					}
 				}
 			}
@@ -83,9 +85,9 @@ class SlimPlate {
 						if (empty($notFound[$match[1]])) unset($notFound[$match[1]]);
 					}
 				}
-				else throw new \InvalidArgumentException("Unset variable: ".$match[0]);
+				else throw new InvalidArgumentException("Unset variable: ".$match[0]);
 			}
-			if ($strict && !empty($notFound)) throw new \InvalidArgumentException("Unused variables: ".implode(',', array_keys($notFound)));
+			if ($strict && !empty($notFound)) throw new InvalidArgumentException("Unused variables: ".implode(',', array_keys($notFound)));
 		}
 		return true;
 	}
@@ -123,7 +125,7 @@ class SlimPlate {
 						}
 						else if (!$con)	$text = preg_replace('/'.preg_quote($match,'/').'/', $this->decideIfElse($firstVal[1], $matches[2][$i]), $text, 1);
 					}
-					catch (\InvalidArgumentException $e) {
+					catch (InvalidArgumentException $e) {
 						// ignore errors
 					}
 					$text = preg_replace('/'.preg_quote($match,'/').'/', '&#'.ord('{').';'.substr($match, 1, -1).'&#'.ord('}').';', $text, 1);
@@ -158,17 +160,17 @@ class SlimPlate {
 	 * @param string $val
 	 * @param array $data
 	 * @return array
-	 * @throws \InvalidArgumentException
+	 * @throws InvalidArgumentException
 	 */
 	protected function findVar ($val, $data) {
 		preg_match('/^\$([a-z][a-z\d_]*)(?:(?:->|-&gt;)([a-z][a-z\d_]*))?/i', $val, $vars);
 
-		if (empty($vars)) throw new \InvalidArgumentException("Wrong variable definition");
+		if (empty($vars)) throw new InvalidArgumentException("Wrong variable definition");
 		else {
 			if ($data) {
 				if (count($vars) === 2 && isset($data[$vars[1]])) $vars[1] = $data[$vars[1]];
 				else if (count($vars) === 3 && isset($data[$vars[1]][$vars[2]])) $vars[1] = $data[$vars[1]][$vars[2]];
-				else throw new \InvalidArgumentException("Undefined variable: ".$vars[0]);
+				else throw new InvalidArgumentException("Undefined variable: ".$vars[0]);
 			}
 		}
 		return $vars;
@@ -202,7 +204,7 @@ class SlimPlate {
 	 * @param string $val
 	 * @param string $sep
 	 * @return string|array
-	 * @throws \InvalidArgumentException
+	 * @throws InvalidArgumentException
 	 */
 	protected function readValueCon ($val, $sep) {
 		if ($sep !== null) {
@@ -215,7 +217,7 @@ class SlimPlate {
 			if ($matches) return $this->convertValueCon(substr($val, 0, strpos($val, $matches[0])));
 			return $this->convertValueCon($val);
 		}
-		throw new \InvalidArgumentException("Undefined value: ".$val);
+		throw new InvalidArgumentException("Undefined value: ".$val);
 	}
 
 	/**
