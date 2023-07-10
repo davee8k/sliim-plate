@@ -36,7 +36,7 @@ class SlimPlateTest extends \PHPUnit\Framework\TestCase {
 	}
 
 	public function test_if_val_val () {
-		$t = new SlimPlate('{if 5 == 5}OK{/if}{if 6 == 5}Wrong{/if}');
+		$t = new SlimPlate('{if 5 == 5}OK{/if}{if 6.1 == 5}Wrong{/if}');
 		$this->assertEquals($t->check([]), true);
 		$this->assertEquals($t->render([]), 'OK');
 	}

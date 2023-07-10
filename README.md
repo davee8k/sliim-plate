@@ -6,7 +6,7 @@ Bare bone templating system for text strings, based on Latte syntax
 
 ## Requirements
 
-- PHP 5.3+
+- PHP 5.4+
 
 ## Usage
 

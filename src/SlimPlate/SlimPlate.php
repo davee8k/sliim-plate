@@ -6,46 +6,46 @@ use InvalidArgumentException;
 /**
  * Bare bone templating system for text strings, based on Latte syntax
  * Self-fixing >< conversion by HTML editors (TinyMCE)
- * Support $VARIALBLES, "VALUES", IF with one condition, ELSE and
+ * Support $VARIABLES, "VALUES", IF with one condition, ELSE and
  * That's all Folks!
  *
  * {if $a->b == 5}OK{else}NO{/if}
  *
  * @author DaVee8k
  * @license https://unlicense.org/
- * @version 0.85.32
+ * @version 0.87
  */
 class SlimPlate {
 	/** @var string */
 	protected static $regexIf = '/\{if((?:(?!\{if).)*)\}((?:(?!\{if).)+)\{\/if\}/iU';
 	/** @var string */
 	protected $template = '';
-	/** @var array */
+	/** @var array<int, array<int, string>> */
 	protected $matchData = null;
 
 	/**
 	 * SlimPlate constructor.
 	 * @param string $template
 	 */
-	public function __construct ($template) {
+	public function __construct (string $template) {
 		$this->template = $template;
 	}
 
 	/**
 	 * Check template for errors, throw InvalidArgumentException
-	 * @param array $data
+	 * @param mixed[] $data
 	 * @param bool $strict
 	 * @return bool
 	 * @throws InvalidArgumentException
 	 */
-	public function check (array $data = array(), $strict = false) {
+	public function check (array $data = [], bool $strict = false): bool {
 		$text = $this->template;
 		while (preg_match_all(self::$regexIf, $text, $matches)) {
 			if (!empty($matches[0])) {
 				foreach ($matches[0] as $i=>$match) {
 					$val = '';
 					$con = trim($matches[1][$i]);
-					$text = preg_replace('/'.preg_quote($match,'/').'/', '', $text, 1);
+					$text = preg_replace('/'.preg_quote($match,'/').'/', '', $text, 1) ?? '';
 
 					if (preg_match_all('/{else}/i', $matches[2][$i]) > 1) throw new InvalidArgumentException("Multiple else in: ".$matches[2][$i]);
 
@@ -94,10 +94,10 @@ class SlimPlate {
 
 	/**
 	 * Render template with current $data
-	 * @param array $data
-	 * @return String
+	 * @param mixed[] $data
+	 * @return string
 	 */
-	public function render (array $data = array()) {
+	public function render (array $data = []): string {
 		$text = $this->template;
 		while (preg_match_all(self::$regexIf, $text, $matches)) {
 			if (!empty($matches[0])) {
@@ -123,12 +123,12 @@ class SlimPlate {
 								if (!$con && $show !== null) $text = preg_replace('/'.preg_quote($match,'/').'/', $this->decideIfElse($show, $matches[2][$i]), $text, 1);
 							}
 						}
-						else if (!$con)	$text = preg_replace('/'.preg_quote($match,'/').'/', $this->decideIfElse($firstVal[1], $matches[2][$i]), $text, 1);
+						else $text = preg_replace('/'.preg_quote($match,'/').'/', $this->decideIfElse($firstVal[1], $matches[2][$i]), $text, 1);
 					}
 					catch (InvalidArgumentException $e) {
 						// ignore errors
 					}
-					$text = preg_replace('/'.preg_quote($match,'/').'/', '&#'.ord('{').';'.substr($match, 1, -1).'&#'.ord('}').';', $text, 1);
+					$text = preg_replace('/'.preg_quote($match,'/').'/', '&#'.ord('{').';'.substr($match, 1, -1).'&#'.ord('}').';', $text, 1) ?? '';
 				}
 			}
 		}
@@ -148,9 +148,9 @@ class SlimPlate {
 
 	/**
 	 * Find all variables {$var} in template
-	 * @return array
+	 * @return array<int, array<int, string>>
 	 */
-	protected function matchVariables () {
+	protected function matchVariables (): array {
 		if ($this->matchData === null) preg_match_all('/\{\$([a-z][a-z\d_]*)(?:(?:->|-&gt;)([a-z][a-z\d_]*))?\}/iU', $this->template, $this->matchData, PREG_SET_ORDER);
 		return $this->matchData;
 	}
@@ -158,11 +158,11 @@ class SlimPlate {
 	/**
 	 * Get variable name from condition a its value
 	 * @param string $val
-	 * @param array $data
-	 * @return array
+	 * @param mixed[] $data
+	 * @return string[]
 	 * @throws InvalidArgumentException
 	 */
-	protected function findVar ($val, $data) {
+	protected function findVar (string $val, array $data): array {
 		preg_match('/^\$([a-z][a-z\d_]*)(?:(?:->|-&gt;)([a-z][a-z\d_]*))?/i', $val, $vars);
 
 		if (empty($vars)) throw new InvalidArgumentException("Wrong variable definition");
@@ -177,11 +177,11 @@ class SlimPlate {
 	}
 
 	/**
-	 * Find comparation function
+	 * Finds a comparison function
 	 * @param string $val
-	 * @return array
+	 * @return string[]
 	 */
-	protected function findOperator ($val) {
+	protected function findOperator (string $val): array {
 		preg_match('/^([=<>]|&gt;|&lt;)+/i', $val, $operator);
 		return $operator;
 	}
@@ -189,9 +189,9 @@ class SlimPlate {
 	/**
 	 * Get value from condition
 	 * @param string $val
-	 * @return array
+	 * @return array<int|float|string>
 	 */
-	protected function findValue ($val) {
+	protected function findValue (string $val): array {
 		if ($val[0] === '"') return $this->readValueCon($val, '"');
 		else if ($val[0] === "'") return $this->readValueCon($val, "'");
 		else if (substr($val[0], 0, 6) === '&quot;') return $this->readValueCon($val, '&quot;');
@@ -202,11 +202,11 @@ class SlimPlate {
 	/**
 	 * Return value
 	 * @param string $val
-	 * @param string $sep
-	 * @return string|array
+	 * @param string|null $sep
+	 * @return array<int|float|string>
 	 * @throws InvalidArgumentException
 	 */
-	protected function readValueCon ($val, $sep) {
+	protected function readValueCon (string $val, ?string $sep): array {
 		if ($sep !== null) {
 			$sep = preg_quote($sep, '/');
 			preg_match('/^'.$sep.'(.*)(?!\\\\'.$sep.').'.$sep.'/iU', $val, $matches);
@@ -223,14 +223,14 @@ class SlimPlate {
 	/**
 	 * Convert found value into correct type
 	 * @param string $val
-	 * @return array	int/float/string
+	 * @return array<int|float|string>
 	 */
-	protected function convertValueCon ($val) {
+	protected function convertValueCon (string $val): array {
 		if (is_numeric($val)) {
-			if (is_int($val)) $val = intval($val);
+			if (filter_var($val, FILTER_VALIDATE_INT) !== false) $val = intval($val);
 			else $val = floatval($val);
 		}
-		return array($val, $val);
+		return [$val, $val];
 	}
 
 	/**
@@ -239,7 +239,7 @@ class SlimPlate {
 	 * @param string $val
 	 * @return string
 	 */
-	protected function decideIfElse ($state, $val) {
+	protected function decideIfElse (bool $state, string $val): string {
 		$pos = stripos($val, '{else}');
 		if ($pos) {
 			if ($state) return substr($val, 0, $pos);
@@ -256,7 +256,7 @@ class SlimPlate {
 	 * @param mixed $y
 	 * @return bool|null
 	 */
-	protected function operator ($x, $operator, $y) {
+	protected function operator ($x, string $operator, $y): ?bool {
 		switch ($operator) {
 			case '==': return $x == $y;
 			case '===': return $x === $y;
