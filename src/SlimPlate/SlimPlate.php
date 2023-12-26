@@ -1,4 +1,5 @@
-<?php
+<?php declare(strict_types=1);
+
 namespace SlimPlate;
 
 use InvalidArgumentException;
@@ -9,7 +10,7 @@ use InvalidArgumentException;
  * Support $VARIABLES, "VALUES", IF with one condition, ELSE and
  * That's all Folks!
  *
- * {if $a->b == 5}OK{else}NO{/if}
+ * <code>{if $a->b == 5}OK{else}NO{/if}</code>
  *
  * @author DaVee8k
  * @license https://unlicense.org/
@@ -24,7 +25,7 @@ class SlimPlate {
 	protected $matchData = null;
 
 	/**
-	 * SlimPlate constructor.
+	 * SlimPlate constructor
 	 * @param string $template
 	 */
 	public function __construct (string $template) {
@@ -53,7 +54,7 @@ class SlimPlate {
 						if ($con[0] === '$') $val = $this->findVar($con, $data);
 						else $val = $this->findValue($con);
 					}
-					if ($val) $con = trim(preg_replace('/'.preg_quote($val[0],'/').'/', '', $con, 1));
+					if ($val) $con = trim(preg_replace('/'.preg_quote((string)$val[0],'/').'/', '', $con, 1));
 					else throw new InvalidArgumentException('Empty IF condition');
 
 					if ($con) {
@@ -66,7 +67,7 @@ class SlimPlate {
 							if ($con[0] === '$') $val = $this->findVar($con, $data);
 							else $val = $this->findValue($con);
 						}
-						if ($val) $con = trim(preg_replace('/'.preg_quote($val[0],'/').'/', '', $con, 1));
+						if ($val) $con = trim(preg_replace('/'.preg_quote((string)$val[0],'/').'/', '', $con, 1));
 						else throw new InvalidArgumentException('Missing second variable: '.trim($matches[1][$i]));
 					}
 				}
@@ -108,7 +109,7 @@ class SlimPlate {
 					try {
 						if ($con[0] === '$') $firstVal = $this->findVar($con, $data);
 						else $firstVal = $this->findValue($con);
-						if ($firstVal) $con = trim(preg_replace('/'.preg_quote($firstVal[0],'/').'/', '', $con, 1));
+						if ($firstVal) $con = trim(preg_replace('/'.preg_quote((string)$firstVal[0],'/').'/', '', $con, 1));
 
 						if ($con) {
 							$operator = $this->findOperator($con);
@@ -117,7 +118,7 @@ class SlimPlate {
 
 								if ($con[0] === '$') $secVal = $this->findVar($con, $data);
 								else $secVal = $this->findValue($con);
-								if ($secVal) $con = trim(preg_replace('/'.preg_quote($secVal[0],'/').'/', '', $con, 1));
+								if ($secVal) $con = trim(preg_replace('/'.preg_quote((string)$secVal[0],'/').'/', '', $con, 1));
 
 								$show = $this->operator($firstVal[1], $operator[0], $secVal[1]);
 								if (!$con && $show !== null) $text = preg_replace('/'.preg_quote($match,'/').'/', $this->decideIfElse($show, $matches[2][$i]), $text, 1);
@@ -136,10 +137,10 @@ class SlimPlate {
 		if ($data) {
 			foreach ($this->matchVariables() as $match) {
 				if (count($match) === 2 && isset($data[$match[1]])) {
-					$text = preg_replace('/'.preg_quote($match[0]).'/', $data[$match[1]], $text, 1);
+					$text = preg_replace('/'.preg_quote((string)$match[0]).'/', (string)$data[$match[1]], $text, 1);
 				}
 				else if (count($match) === 3 && isset($data[$match[1]][$match[2]])) {
-					$text = preg_replace('/'.preg_quote($match[0]).'/', $data[$match[1]][$match[2]], $text, 1);
+					$text = preg_replace('/'.preg_quote((string)$match[0]).'/', (string)$data[$match[1]][$match[2]], $text, 1);
 				}
 			}
 		}
@@ -156,7 +157,7 @@ class SlimPlate {
 	}
 
 	/**
-	 * Get variable name from condition a its value
+	 * Get variable name from the condition and its value
 	 * @param string $val
 	 * @param mixed[] $data
 	 * @return string[]
@@ -235,11 +236,11 @@ class SlimPlate {
 
 	/**
 	 * Find and decide IF/ELSE
-	 * @param bool $state
+	 * @param int|bool $state
 	 * @param string $val
 	 * @return string
 	 */
-	protected function decideIfElse (bool $state, string $val): string {
+	protected function decideIfElse ($state, string $val): string {
 		$pos = stripos($val, '{else}');
 		if ($pos) {
 			if ($state) return substr($val, 0, $pos);
