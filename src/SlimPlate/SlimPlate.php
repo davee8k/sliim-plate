@@ -14,7 +14,7 @@ use InvalidArgumentException;
  *
  * @author DaVee8k
  * @license https://unlicense.org/
- * @version 0.87
+ * @version 0.87.1
  */
 class SlimPlate {
 	/** @var string */
@@ -54,12 +54,12 @@ class SlimPlate {
 						if ($con[0] === '$') $val = $this->findVar($con, $data);
 						else $val = $this->findValue($con);
 					}
-					if ($val) $con = trim(preg_replace('/'.preg_quote((string)$val[0],'/').'/', '', $con, 1));
+					if ($val) $con = $this->removeRegex($con, (string) $val[0]);
 					else throw new InvalidArgumentException('Empty IF condition');
 
 					if ($con) {
 						$operator = $this->findOperator($con);
-						if ($operator && $this->operator(0, $operator[0], 0) !== null) $con = trim(preg_replace('/'.preg_quote($operator[0],'/').'/', '', $con, 1));
+						if ($operator && $this->operator(0, $operator[0], 0) !== null) $con = $this->removeRegex($con, $operator[0]);
 						else throw new InvalidArgumentException("Undefined IF operator: ".$con);
 
 						$val = '';
@@ -67,7 +67,7 @@ class SlimPlate {
 							if ($con[0] === '$') $val = $this->findVar($con, $data);
 							else $val = $this->findValue($con);
 						}
-						if ($val) $con = trim(preg_replace('/'.preg_quote((string)$val[0],'/').'/', '', $con, 1));
+						if ($val) $con = $this->removeRegex($con, (string) $val[0]);
 						else throw new InvalidArgumentException('Missing second variable: '.trim($matches[1][$i]));
 					}
 				}
@@ -100,7 +100,7 @@ class SlimPlate {
 	 */
 	public function render (array $data = []): string {
 		$text = $this->template;
-		while (preg_match_all(self::$regexIf, $text, $matches)) {
+		while ($text && preg_match_all(self::$regexIf, $text, $matches)) {
 			if (!empty($matches[0])) {
 				foreach ($matches[0] as $i=>$match) {
 					$con = trim($matches[1][$i]);
@@ -109,42 +109,51 @@ class SlimPlate {
 					try {
 						if ($con[0] === '$') $firstVal = $this->findVar($con, $data);
 						else $firstVal = $this->findValue($con);
-						if ($firstVal) $con = trim(preg_replace('/'.preg_quote((string)$firstVal[0],'/').'/', '', $con, 1));
+						if ($firstVal) $con = $this->removeRegex($con, (string) $firstVal[0]);
 
 						if ($con) {
 							$operator = $this->findOperator($con);
 							if ($operator) {
-								$con = trim(preg_replace('/'.preg_quote($operator[0],'/').'/', '', $con, 1));
+								$con = $this->removeRegex($con, $operator[0]);
 
 								if ($con[0] === '$') $secVal = $this->findVar($con, $data);
 								else $secVal = $this->findValue($con);
-								if ($secVal) $con = trim(preg_replace('/'.preg_quote((string)$secVal[0],'/').'/', '', $con, 1));
+								if ($secVal) $con = $this->removeRegex($con, (string) $secVal[0]);
 
 								$show = $this->operator($firstVal[1], $operator[0], $secVal[1]);
-								if (!$con && $show !== null) $text = preg_replace('/'.preg_quote($match,'/').'/', $this->decideIfElse($show, $matches[2][$i]), $text, 1);
+								if (!$con && $show !== null && $text) {
+									$text = preg_replace('/'.preg_quote($match,'/').'/', $this->decideIfElse($show, $matches[2][$i]), $text, 1);
+								}
 							}
 						}
-						else $text = preg_replace('/'.preg_quote($match,'/').'/', $this->decideIfElse($firstVal[1], $matches[2][$i]), $text, 1);
+						else if ($text) {
+							$text = preg_replace('/'.preg_quote($match,'/').'/', $this->decideIfElse(boolval($firstVal[1]), $matches[2][$i]), $text, 1);
+						}
 					}
 					catch (InvalidArgumentException $e) {
 						// ignore errors
 					}
-					$text = preg_replace('/'.preg_quote($match,'/').'/', '&#'.ord('{').';'.substr($match, 1, -1).'&#'.ord('}').';', $text, 1) ?? '';
+					if ($text) {
+						$text = preg_replace('/'.preg_quote($match,'/').'/', '&#'.ord('{').';'.substr($match, 1, -1).'&#'.ord('}').';', $text, 1);
+					}
 				}
 			}
 		}
 
 		if ($data) {
 			foreach ($this->matchVariables() as $match) {
-				if (count($match) === 2 && isset($data[$match[1]])) {
-					$text = preg_replace('/'.preg_quote((string)$match[0]).'/', (string)$data[$match[1]], $text, 1);
+				if ($text) {
+					if (count($match) === 2 && isset($data[$match[1]])) {
+						$text = preg_replace('/'.preg_quote((string)$match[0]).'/', (string)$data[$match[1]], $text, 1);
+					}
+					else if (count($match) === 3 && isset($data[$match[1]][$match[2]])) {
+						$text = preg_replace('/'.preg_quote((string)$match[0]).'/', (string)$data[$match[1]][$match[2]], $text, 1);
+					}
 				}
-				else if (count($match) === 3 && isset($data[$match[1]][$match[2]])) {
-					$text = preg_replace('/'.preg_quote((string)$match[0]).'/', (string)$data[$match[1]][$match[2]], $text, 1);
-				}
+				else break;
 			}
 		}
-		return $text;
+		return $text ?? '';
 	}
 
 	/**
@@ -175,6 +184,17 @@ class SlimPlate {
 			}
 		}
 		return $vars;
+	}
+
+	/**
+	 * Remove regex from text
+	 * @param string $text
+	 * @param string $regex
+	 * @return string
+	 */
+	protected function removeRegex (string $text, string $regex): string {
+		$out = preg_replace('/'.preg_quote($regex, '/').'/', '', $text, 1);
+		return $out === null ? '' : trim($out);
 	}
 
 	/**
@@ -215,7 +235,7 @@ class SlimPlate {
 		}
 		else {
 			preg_match('/( |=|<|>|&lt;|&gt;)/i', $val, $matches);
-			if ($matches) return $this->convertValueCon(substr($val, 0, strpos($val, $matches[0])));
+			if ($matches) return $this->convertValueCon(substr($val, 0, (int) strpos($val, $matches[0])));
 			return $this->convertValueCon($val);
 		}
 		throw new InvalidArgumentException("Undefined value: ".$val);

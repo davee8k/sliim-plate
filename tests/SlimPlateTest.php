@@ -2,7 +2,9 @@
 
 use SlimPlate\SlimPlate;
 
-class SlimPlateTest extends \PHPUnit\Framework\TestCase {
+use PHPUnit\Framework\TestCase;
+
+class SlimPlateTest extends TestCase {
 
 	public function testIfValue (): void {
 		$t = new SlimPlate('{if 5}OK{/if}');
@@ -12,7 +14,8 @@ class SlimPlateTest extends \PHPUnit\Framework\TestCase {
 
 	public function testIfValueFail (): void {
 		$t = new SlimPlate('{if}OK{/if}');
-		$this->expectException('InvalidArgumentException', 'Empty IF condition');
+		$this->expectException('InvalidArgumentException');
+		$this->expectExceptionMessage('Empty IF condition');
 		$this->assertFalse($t->check([]));
 
 		$this->assertEquals($t->render([]), '{if}OK{/if}');
@@ -84,25 +87,29 @@ class SlimPlateTest extends \PHPUnit\Framework\TestCase {
 
 	public function testElseFail (): void {
 		$t = new SlimPlate('{if 1}a{else}b{else}c{/if}');
-		$this->expectException('InvalidArgumentException', 'Multiple else in: a{else}b{else}c');
+		$this->expectException('InvalidArgumentException');
+		$this->expectExceptionMessage('Multiple else in: a{else}b{else}c');
 		$t->check([]);
 	}
 
 	public function testBadOpreatorFail (): void {
 		$t = new SlimPlate("{if x ==== y}aaaa{/if}");
-		$this->expectException('InvalidArgumentException', 'Undefined IF operator: ==== y');
+		$this->expectException('InvalidArgumentException');
+		$this->expectExceptionMessage('Undefined IF operator: ==== y');
 		$t->check([]);
 	}
 
 	public function testNoOperatorFail (): void {
 		$t = new SlimPlate('{if x www}aaaa{/if}');
-		$this->expectException('InvalidArgumentException', 'Undefined IF operator: www');
+		$this->expectException('InvalidArgumentException');
+		$this->expectExceptionMessage('Undefined IF operator: www');
 		$t->check([]);
 	}
 
 	public function testBadValueFail (): void {
 		$t = new SlimPlate("{if 6 > \"x'}OK{/if}");
-		$this->expectException('InvalidArgumentException', 'Undefined value: ');
+		$this->expectException('InvalidArgumentException');
+		$this->expectExceptionMessage('Undefined value: ');
 		$t->check();
 	}
 
@@ -113,43 +120,50 @@ class SlimPlateTest extends \PHPUnit\Framework\TestCase {
 
 	public function testVariableFail (): void {
 		$t = new SlimPlate('{if $x}aaaa{/if}');
-		$this->expectException('InvalidArgumentException', 'Undefined variable: $x');
+		$this->expectException('InvalidArgumentException');
+		$this->expectExceptionMessage('Undefined variable: $x');
 		$t->check(['w'=>1]);
 	}
 
 	public function testNoVariableFail (): void {
 		$t = new SlimPlate('{if x ===}aaaa{/if}');
-		$this->expectException('InvalidArgumentException', 'Missing second variable: x ===');
+		$this->expectException('InvalidArgumentException');
+		$this->expectExceptionMessage('Missing second variable: x ===');
 		$t->check([]);
 	}
 
 	public function testNameVariableFail (): void {
 		$t = new SlimPlate('{if $_a}y{/if}');
-		$this->expectException('InvalidArgumentException', 'Wrong variable definition');
+		$this->expectException('InvalidArgumentException');
+		$this->expectExceptionMessage('Wrong variable definition');
 		$t->check(['y'=>'a']);
 	}
 
 	public function testMissingVariableFail (): void {
 		$t = new SlimPlate('{$a}');
-		$this->expectException('InvalidArgumentException', 'Unset variable: {$a}');
+		$this->expectException('InvalidArgumentException');
+		$this->expectExceptionMessage('Unset variable: {$a}');
 		$t->check(['y'=>'a']);
 	}
 
 	public function testCheckStrickValuesFail (): void {
 		$t = new SlimPlate('{$a}');
-		$this->expectException('InvalidArgumentException', 'Unused variables: b,c');
+		$this->expectException('InvalidArgumentException');
+		$this->expectExceptionMessage('Unused variables: b,c');
 		$t->check(['a'=>'a','b'=>'b','c'=>'c'], true);
 	}
 
 	public function testCheckWrongValueTypeFail (): void {
 		$t = new SlimPlate('{$a->a}');
-		$this->expectException('InvalidArgumentException', 'Unset variable: {$a->a}');
+		$this->expectException('InvalidArgumentException');
+		$this->expectExceptionMessage('Unset variable: {$a->a}');
 		$t->check(['a'=>['b'=>'b']]);
 	}
 
 	public function testCheckWrongValueArrayTypeFail (): void {
 		$t = new SlimPlate('{$a->a}');
-		$this->expectException('InvalidArgumentException', 'Unused variables: a');
+		$this->expectException('InvalidArgumentException');
+		$this->expectExceptionMessage('Unused variables: a');
 		$t->check(['a'=>['a'=>'a','b'=>'b','c'=>'c']], true);
 	}
 }
